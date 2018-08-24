@@ -92,7 +92,7 @@ type LivepeerEthClient interface {
 	Withdraw() (*types.Transaction, error)
 	GetJob(jobID *big.Int) (*lpTypes.Job, error)
 	GetClaim(jobID *big.Int, claimID *big.Int) (*lpTypes.Claim, error)
-	BroadcasterDeposit(broadcaster ethcommon.Address) (*big.Int, error)
+	Broadcaster(broadcaster ethcommon.Address) (deposit *big.Int, withdrawBlock *big.Int, err error)
 	NumJobs() (*big.Int, error)
 
 	// Parameters
@@ -599,18 +599,38 @@ func (c *client) Deposit(amount *big.Int) (*types.Transaction, error) {
 	return tx, err
 }
 
+func (c *client) Withdraw() (*types.Transaction, error) {
+	_, withdrawBlock, err := c.Broadcaster(c.Account().Address)
+	if err != nil {
+		glog.Errorf("Error fetching broadcaster info: %v", err)
+		return nil, err
+	}
+
+	latest, err := c.LatestBlockNum()
+	if err != nil {
+		glog.Errorf("Error fetching latest block: %v", latest)
+		return nil, err
+	}
+
+	if withdrawBlock.Cmp(latest) > 0 {
+		return nil, errors.New(fmt.Sprintf("Error: withdraw block (%v) is later than current block (%v).", withdrawBlock.String(), latest.String()))
+	} else {
+		return c.JobsManagerSession.Withdraw()
+	}
+}
+
 // Disambiguate between the Verifiy method in JobsManager and in Verifier
 func (c *client) Verify(jobId *big.Int, claimId *big.Int, segmentNumber *big.Int, dataStorageHash string, dataHashes [2][32]byte, broadcasterSig []byte, proof []byte) (*types.Transaction, error) {
 	return c.JobsManagerSession.Verify(jobId, claimId, segmentNumber, dataStorageHash, dataHashes, broadcasterSig, proof)
 }
 
-func (c *client) BroadcasterDeposit(addr ethcommon.Address) (*big.Int, error) {
+func (c *client) Broadcaster(addr ethcommon.Address) (deposit *big.Int, withdrawBlock *big.Int, err error) {
 	b, err := c.Broadcasters(addr)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return b.Deposit, nil
+	return b.Deposit, b.WithdrawBlock, nil
 }
 
 func (c *client) IsActiveTranscoder() (bool, error) {

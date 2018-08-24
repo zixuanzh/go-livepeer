@@ -229,7 +229,7 @@ func (c *BasicClaimManager) AddReceipt(seqNo int64,
 }
 
 func (c *BasicClaimManager) SufficientBroadcasterDeposit() (bool, error) {
-	bDeposit, err := c.client.BroadcasterDeposit(c.broadcasterAddr)
+	bDeposit, _, err := c.client.Broadcaster(c.broadcasterAddr)
 	if err != nil {
 		glog.Errorf("Error getting broadcaster deposit: %v", err)
 		return false, err

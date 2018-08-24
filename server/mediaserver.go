@@ -265,7 +265,7 @@ func gotRTMPStreamHandler(s *LivepeerServer) func(url *url.URL, rtmpStrm stream.
 				return ErrRoundInit
 			}
 			// Check deposit
-			deposit, err := s.LivepeerNode.Eth.BroadcasterDeposit(s.LivepeerNode.Eth.Account().Address)
+			deposit, _, err := s.LivepeerNode.Eth.Broadcaster(s.LivepeerNode.Eth.Account().Address)
 			if err != nil {
 				glog.Errorf("Error getting deposit: %v", err)
 				return ErrBroadcast
